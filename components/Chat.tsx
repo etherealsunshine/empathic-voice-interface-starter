@@ -4,6 +4,7 @@ import { VoiceProvider } from "@humeai/voice-react";
 import Messages from "./Messages";
 import Controls from "./Controls";
 import StartCall from "./StartCall";
+import FaceTracking from "@/components/ui/Facetracking";
 import { ComponentRef, useRef } from "react";
 
 export default function ClientComponent({
@@ -13,16 +14,10 @@ export default function ClientComponent({
 }) {
   const timeout = useRef<number | null>(null);
   const ref = useRef<ComponentRef<typeof Messages> | null>(null);
-
-  // optional: use configId from environment variable
   const configId = process.env['adfa5be7-47b2-4196-b47b-8de9f66993e9'];
   
   return (
-    <div
-      className={
-        "relative grow flex flex-col mx-auto w-full overflow-hidden h-[0px]"
-      }
-    >
+    <div className="relative grow flex flex-col mx-auto w-full overflow-hidden h-[0px]">
       <VoiceProvider
         auth={{ type: "accessToken", value: accessToken }}
         configId={configId}
@@ -34,7 +29,6 @@ export default function ClientComponent({
           timeout.current = window.setTimeout(() => {
             if (ref.current) {
               const scrollHeight = ref.current.scrollHeight;
-
               ref.current.scrollTo({
                 top: scrollHeight,
                 behavior: "smooth",
@@ -43,7 +37,12 @@ export default function ClientComponent({
           }, 200);
         }}
       >
-        <Messages ref={ref} />
+        <div className="flex gap-4 p-4">
+          <FaceTracking />
+          <div className="flex-1">
+            <Messages ref={ref} />
+          </div>
+        </div>
         <Controls />
         <StartCall />
       </VoiceProvider>
