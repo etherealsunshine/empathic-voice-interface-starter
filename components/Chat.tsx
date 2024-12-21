@@ -16,6 +16,7 @@ export default function ClientComponent({
   const ref = useRef<ComponentRef<typeof Messages> | null>(null);
   const configId = 'adfa5be7-47b2-4196-b47b-8de9f66993e9';
   
+  
   return (
     <div className="relative grow flex flex-col mx-auto w-full overflow-hidden h-[0px]">
       <VoiceProvider
