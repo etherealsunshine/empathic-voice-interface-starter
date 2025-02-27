@@ -4,7 +4,9 @@ import { VideoRecorder } from "@/utils/VideoRecorder";
 import { blobToBase64 } from "@/utils/blobutilities";
 import { cn } from "@/utils";
 import Expressions from "../Expressions";
-
+import { Progress } from "./progress";
+import { Timer } from "./timer";
+import { Badge } from "./badge";
 type TrackedFace = {
   boundingBox: {
     x: number;
@@ -28,6 +30,8 @@ export default function FaceTracking() {
   const [status, setStatus] = useState<string>("");
   const maxReconnects = 3;
   const [isCallStarted, setIsCallStarted] = useState(false);
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const totalQuestions = 5;
 
   useEffect(() => {
     console.log("Mounting component");
@@ -225,50 +229,88 @@ export default function FaceTracking() {
     }
   }
 
-  function handleStartCall() {
+  // Automatically connect when component mounts
+  useEffect(() => {
     setIsCallStarted(true);
-  }
+    return () => {
+      setIsCallStarted(false);
+      stopEverything();
+    };
+  }, []);
 
-  function handleEndCall() {
-    setIsCallStarted(false);
-    stopEverything();
-  }
+  // Get top 3 emotions
+  const topEmotions = Object.entries(emotions)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 3);
 
   return (
-    <div className="flex flex-col w-[500px]">
-      <div className="relative h-[375px] overflow-hidden rounded-lg border border-border bg-black">
+    <div className="flex flex-col w-full">
+      {/* Interview Progress */}
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-sm font-medium">
+          Question {currentQuestion + 1} of {totalQuestions}
+        </span>
+        <div className="w-2/3">
+          <Progress value={(currentQuestion / totalQuestions) * 100} />
+        </div>
+      </div>
+
+      {/* Video Feed */}
+      <div className="relative overflow-hidden rounded-lg border border-border bg-black aspect-video mb-4">
         <video
-          className="absolute -scale-x-[1]"
+          className="absolute -scale-x-[1] w-full h-full object-cover"
           ref={videoRef}
           autoPlay
           playsInline
         />
         <canvas className="absolute" ref={canvasRef} />
         <canvas className="hidden" ref={photoRef} />
+        
+        {/* Status Overlay */}
         {status && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white">
             {status}
           </div>
         )}
-        <div className="absolute bottom-4 left-0 right-0 flex justify-center">
-          {!isCallStarted ? (
-            <button
-              onClick={handleStartCall}
-              className="rounded-full bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
-            >
-              Start Call
-            </button>
-          ) : (
-            <button
-              onClick={handleEndCall}
-              className="rounded-full bg-red-500 px-4 py-2 text-white hover:bg-red-600"
-            >
-              End Call
-            </button>
-          )}
+
+        {/* Timer & Confidence Score */}
+        <div className="absolute top-4 right-4 flex items-center gap-2">
+          <div className="bg-black/50 text-white px-2 py-1 rounded text-sm">
+            {isCallStarted ? formatTime(Date.now()) : "00:00"}
+          </div>
+        </div>
+        
+        <div className="absolute bottom-4 left-4 flex items-center gap-2">
+          <div className="bg-black/50 text-white px-2 py-1 rounded text-sm">
+            Confidence: {calculateConfidence(emotions)}%
+          </div>
         </div>
       </div>
-      <Expressions values={emotions} />
+
+      {/* Emotions Display - Simple horizontal list of top 3 emotions */}
+      <div className="flex gap-8 py-2 text-base">
+        {topEmotions.map(([emotion, score], index) => (
+          <div key={index} className="flex items-center">
+            <span className="font-medium capitalize">{emotion}:</span>
+            <span className="ml-2">{score.toFixed(2)}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
+}
+
+// Helper functions
+function calculateConfidence(emotions: Record<string, number>): number {
+  const positiveEmotions = ['Joy', 'Calmness', 'Confidence'];
+  const total = positiveEmotions.reduce((acc, emotion) => {
+    return acc + (emotions[emotion] || 0);
+  }, 0);
+  return Math.round((total / positiveEmotions.length) * 100);
+}
+
+function formatTime(time: number): string {
+  const minutes = Math.floor(time / 60000);
+  const seconds = Math.floor((time % 60000) / 1000);
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
